@@ -10,42 +10,9 @@ The main research question is:
 
 > **How does the quality and type of retrieved evidence affect biomedical question answering?**
 
----
-
-## Research Pipeline
-
-The project evaluates the following approaches:
-
-```text
-                    Biomedical Question
-                            │
-              ┌─────────────┴─────────────┐
-              │                           │
-         Baseline                      RAG
-              │                           │
-        Qwen2.5-1.5B          ┌────────────┼────────────┐
-                              │            │            │
-                           Oracle        BM25         Dense
-                              │            │            │
-                              │        Sentence/     MiniLM
-                              │        Document        │
-                              │            │            │
-                              └────────────┴────────────┘
-                                           │
-                                           ▼
-                                Qwen2.5-1.5B-Instruct
-                                           │
-                                           ▼
-                                        Yes / No
-```
-
----
-
 ## Models
 
 ### Generator
-
-All experiments use:
 
 **Qwen/Qwen2.5-1.5B-Instruct**
 
@@ -53,13 +20,9 @@ The language model is responsible for generating the final `yes` or `no` answer.
 
 ### Dense Retriever
 
-Dense retrieval uses:
-
 **sentence-transformers/all-MiniLM-L6-v2**
 
-The model converts questions and candidate evidence sentences into embeddings. Cosine similarity is then used to identify semantically relevant evidence.
-
----
+The model converts questions and candidate evidence sentences into embeddings. Cosine similarity is used to retrieve semantically relevant evidence.
 
 ## Experiments
 
@@ -67,43 +30,21 @@ The model converts questions and candidate evidence sentences into embeddings. C
 
 The question is directly provided to Qwen2.5-1.5B-Instruct without external retrieval.
 
-```text
-Question
-   ↓
-Qwen2.5-1.5B-Instruct
-   ↓
-Yes / No
-```
+**Question → Qwen → Yes / No**
 
 ### 2. Oracle Context RAG
 
-The gold context provided by the dataset is supplied directly to the language model.
+The gold context provided by the dataset is supplied directly to Qwen2.5-1.5B-Instruct.
 
-```text
-Question + Gold Context
-          ↓
-Qwen2.5-1.5B-Instruct
-          ↓
-       Yes / No
-```
+**Question + Gold Context → Qwen → Yes / No**
 
-This experiment provides an approximate upper bound for retrieval-based approaches because the model receives the dataset's provided evidence rather than retrieving it.
+This experiment provides an approximate upper bound for retrieval-based approaches because the model receives the dataset's provided evidence.
 
 ### 3. BM25 Sentence-level RAG
 
 BM25 is used to retrieve individual sentences from the training corpus.
 
-```text
-Question
-   ↓
-BM25
-   ↓
-Top-k sentences
-   ↓
-Qwen2.5-1.5B-Instruct
-   ↓
-Yes / No
-```
+**Question → BM25 → Top-k sentences → Qwen → Yes / No**
 
 ### 4. BM25 Document-level RAG
 
@@ -115,127 +56,53 @@ Dense semantic retrieval is performed using `all-MiniLM-L6-v2`.
 
 The retrieved evidence is then passed to Qwen2.5-1.5B-Instruct.
 
-```text
-Question
-   ↓
-all-MiniLM-L6-v2
-   ↓
-Semantic similarity
-   ↓
-Top-k evidence
-   ↓
-Qwen2.5-1.5B-Instruct
-   ↓
-Yes / No
-```
+**Question → MiniLM → Semantic Retrieval → Top-k Evidence → Qwen → Yes / No**
 
 Two retrieval settings were investigated:
 
-* Top-3
-* Top-5
-
----
+- Top-3
+- Top-5
 
 ## Results
 
-| Method             | Retrieval        | Top-K |  Accuracy |  Macro-F1 |
-| ------------------ | ---------------- | ----: | --------: | --------: |
-| Baseline           | None             |     — | **0.743** | **0.722** |
-| Oracle Context RAG | Gold context     |     — | **0.887** | **0.849** |
-| BM25 Sentence RAG  | BM25             |     3 |     0.370 |     ~0.35 |
-| BM25 Document RAG  | BM25             |     3 |     0.420 |     ~0.41 |
-| Dense RAG          | all-MiniLM-L6-v2 |     3 |     0.740 |     0.660 |
-| Dense RAG          | all-MiniLM-L6-v2 |     5 | **0.750** | **0.680** |
-
----
-
-## Detailed Dense RAG Results
-
-### Top-3
-
-```text
-Accuracy:  0.740
-Macro-F1:  0.660
-```
-
-### Top-5
-
-```text
-Accuracy:  0.750
-Macro-F1:  0.680
-```
-
-Increasing the retrieved evidence from three to five sentences produced a small improvement in both accuracy and Macro-F1.
-
-| Metric     | Top-3 |     Top-5 |
-| ---------- | ----: | --------: |
-| Accuracy   | 0.740 | **0.750** |
-| Macro-F1   | 0.660 | **0.680** |
-| Yes Recall |  0.85 |  **0.86** |
-| No Recall  |  0.46 |  **0.48** |
-
----
+| Method | Retrieval | Top-K | Accuracy | Macro-F1 |
+|---|---|---:|---:|---:|
+| Baseline | None | — | **0.743** | **0.722** |
+| Oracle Context RAG | Gold context | — | **0.887** | **0.849** |
+| BM25 Sentence RAG | BM25 | 3 | 0.370 | ~0.35 |
+| BM25 Document RAG | BM25 | 3 | 0.420 | ~0.41 |
+| Dense RAG | all-MiniLM-L6-v2 | 3 | 0.740 | 0.660 |
+| Dense RAG | all-MiniLM-L6-v2 | 5 | **0.750** | **0.680** |
 
 ## Key Findings
 
-### 1. Gold evidence substantially improves performance
+### Oracle Context RAG
 
-Oracle Context RAG achieved:
+Oracle Context RAG achieved an Accuracy of **0.887** and a Macro-F1 of **0.849**, substantially outperforming the retrieval-free baseline.
 
-```text
-Accuracy: 0.887
-Macro-F1: 0.849
-```
+This suggests that high-quality evidence can significantly improve biomedical question answering.
 
-compared with the retrieval-free baseline:
+### BM25 Retrieval
 
-```text
-Accuracy: 0.743
-Macro-F1: 0.722
-```
-
-This suggests that high-quality evidence can substantially improve biomedical question answering.
-
-### 2. BM25 retrieval performed poorly
-
-Both sentence-level and document-level BM25 retrieval performed substantially worse than the baseline.
+BM25-based retrieval performed substantially worse than the baseline.
 
 This suggests that lexical matching alone may retrieve irrelevant or insufficient evidence for biomedical questions.
 
-### 3. Dense retrieval substantially outperformed BM25
+### Dense Retrieval
 
-Dense RAG using `all-MiniLM-L6-v2` achieved:
+Dense retrieval using `all-MiniLM-L6-v2` substantially outperformed the BM25 approaches.
 
-```text
-Accuracy: 0.740
-Macro-F1: 0.660
-```
+With Top-3 retrieval:
 
-with Top-3 retrieval.
+- Accuracy: **0.740**
+- Macro-F1: **0.660**
 
-This was substantially better than the BM25-based approaches.
+With Top-5 retrieval:
 
-### 4. Increasing Top-K from 3 to 5 provided a small improvement
+- Accuracy: **0.750**
+- Macro-F1: **0.680**
 
-Dense RAG improved from:
-
-```text
-Top-3:
-Accuracy = 0.740
-Macro-F1 = 0.660
-```
-
-to:
-
-```text
-Top-5:
-Accuracy = 0.750
-Macro-F1 = 0.680
-```
-
-This suggests that providing slightly more retrieved evidence can help the language model, although additional evidence may also introduce retrieval noise.
-
----
+Increasing Top-K from 3 to 5 produced a small improvement in both Accuracy and Macro-F1.
 
 ## Dataset
 
@@ -249,167 +116,3 @@ Expected local structure:
 data/
 ├── train.json
 └── test.json
-```
-
-Each test example contains fields such as:
-
-```json
-{
-  "id": "...",
-  "question": "...",
-  "context": [...],
-  "ideal_answer": [...],
-  "label": "yes"
-}
-```
-
----
-
-## Project Structure
-
-```text
-bioasq-rag-comparison/
-│
-├── data/
-│   └── README.md
-│
-├── src/
-│   ├── baseline.py
-│   ├── oracle_rag.py
-│   ├── bm25_rag.py
-│   ├── bm25_doc_rag.py
-│   ├── dense_rag.py
-│   └── evalate.py
-│
-├── scripts/
-│   ├── run_baseline.sh
-│   ├── run_oracle.sh
-│   ├── run_bm25.sh
-│   ├── run_bm25_doc.sh
-│   └── run_dense.sh
-│
-├── results/
-│   └── experiment_results.md
-│
-├── requirements.txt
-├── .gitignore
-└── README.md
-```
-
----
-
-## Installation
-
-Create a Python environment and install the required dependencies:
-
-```bash
-pip install torch
-pip install transformers
-pip install sentence-transformers
-pip install rank-bm25
-pip install scikit-learn
-pip install tqdm
-```
-
-Or install from:
-
-```bash
-pip install -r requirements.txt
-```
-
----
-
-## Running the Experiments
-
-### Baseline
-
-```bash
-python src/baseline.py
-```
-
-### Oracle Context RAG
-
-```bash
-python src/oracle_rag.py
-```
-
-### BM25 Sentence-level RAG
-
-```bash
-python src/bm25_rag.py
-```
-
-### BM25 Document-level RAG
-
-```bash
-python src/bm25_doc_rag.py
-```
-
-### Dense RAG
-
-```bash
-python src/dense_rag.py
-```
-
----
-
-## Evaluation
-
-Predictions can be evaluated using:
-
-```bash
-python src/evalate.py
-```
-
-The evaluation reports:
-
-* Accuracy
-* Macro-F1
-* Precision
-* Recall
-* Per-class F1
-* Confusion matrix
-
----
-
-## Computing Environment
-
-Experiments were conducted on the UPPMAX HPC environment using SLURM.
-
-The project was developed using:
-
-* Python
-* PyTorch
-* Hugging Face Transformers
-* Sentence Transformers
-* scikit-learn
-* BM25
-* SLURM / UPPMAX
-
----
-
-## Future Work
-
-Possible extensions include:
-
-* Hybrid BM25 + dense retrieval
-* Reciprocal Rank Fusion (RRF)
-* Neural reranking
-* Alternative embedding models
-* Larger language models
-* Retrieval quality evaluation
-* Evidence-grounded answer evaluation
-* Error analysis of retrieved evidence
-* Analysis of hallucination and retrieval noise
-
----
-
-## Conclusion
-
-This project demonstrates that retrieval strategy has a substantial impact on biomedical question answering.
-
-While BM25 retrieval performed poorly in this setting, dense semantic retrieval using `all-MiniLM-L6-v2` substantially improved over BM25 and achieved performance close to the retrieval-free Qwen baseline.
-
-The strong performance of Oracle Context RAG further indicates that **retrieval quality is a major bottleneck for RAG-based biomedical question answering**.
-
-Overall, the experiments highlight the importance of selecting relevant and high-quality evidence before passing retrieved information to a language model.
