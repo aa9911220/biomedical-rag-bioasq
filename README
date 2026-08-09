@@ -1,6 +1,5 @@
-# Biomedical Question Answering with Retrieval-Augmented Generation
-
-## Overview
+Biomedical Question Answering with Retrieval-Augmented Generation
+Overview
 
 This project investigates how different retrieval strategies affect biomedical yes/no question answering with a small instruction-tuned language model.
 
@@ -8,39 +7,33 @@ Using a BioASQ-derived biomedical QA dataset, we compare a retrieval-free baseli
 
 The main research question is:
 
-> **How does the quality and type of retrieved evidence affect biomedical question answering?**
+How does the quality and type of retrieved evidence affect biomedical question answering?
 
-## Methods
+Methods
 
-The experiments use **Qwen2.5-1.5B-Instruct** as the answer-generation model.
+The experiments use Qwen2.5-1.5B-Instruct as the answer-generation model.
 
-For dense retrieval, **sentence-transformers/all-MiniLM-L6-v2** is used as the embedding model.
+For dense retrieval, sentence-transformers/all-MiniLM-L6-v2 is used as the embedding model.
 
 We compare the following approaches:
 
-### 1. Baseline
+1. Baseline
 
 The question is directly provided to Qwen2.5-1.5B-Instruct without external evidence.
 
-```text
 Question → Qwen → Answer
-```
-
-### 2. Oracle Context RAG
+2. Oracle Context RAG
 
 The gold context provided by the dataset is directly supplied to the language model.
 
-```text
 Question + Gold Context → Qwen → Answer
-```
 
 This experiment provides an approximate upper bound for retrieval-based approaches.
 
-### 3. BM25 Sentence-level RAG
+3. BM25 Sentence-level RAG
 
 BM25 is used to retrieve relevant sentences from the training corpus.
 
-```text
 Question
    ↓
 BM25
@@ -50,19 +43,16 @@ Top-k sentences
 Qwen
    ↓
 Yes / No
-```
-
-### 4. BM25 Document-level RAG
+4. BM25 Document-level RAG
 
 BM25 retrieval is performed at the document level rather than individual sentences.
 
-### 5. Dense RAG
+5. Dense RAG
 
-Semantic retrieval is performed using `all-MiniLM-L6-v2`.
+Semantic retrieval is performed using all-MiniLM-L6-v2.
 
 The retrieved evidence is then passed to Qwen2.5-1.5B-Instruct.
 
-```text
 Question
    ↓
 all-MiniLM-L6-v2
@@ -74,122 +64,96 @@ Top-k evidence
 Qwen2.5-1.5B-Instruct
    ↓
 Yes / No
-```
 
 Two retrieval settings are investigated:
 
-* Top-3
-* Top-5
-
-## Results
-
-| Method             |  Accuracy |  Macro-F1 |
-| ------------------ | --------: | --------: |
-| Baseline           |     0.743 |     0.722 |
-| Oracle Context RAG | **0.887** | **0.849** |
-| BM25 Sentence RAG  |     0.370 |     ~0.35 |
-| BM25 Document RAG  |     0.420 |     ~0.41 |
-| Dense RAG (Top-3)  |     0.740 |     0.660 |
-| Dense RAG (Top-5)  | **0.750** | **0.680** |
-
-### Key observations
+Top-3
+Top-5
+Results
+Method	Accuracy	Macro-F1
+Baseline	0.743	0.722
+Oracle Context RAG	0.887	0.849
+BM25 Sentence RAG	0.370	~0.35
+BM25 Document RAG	0.420	~0.41
+Dense RAG (Top-3)	0.740	0.660
+Dense RAG (Top-5)	0.750	0.680
+Key observations
 
 The Oracle Context experiment substantially outperforms the retrieval-free baseline, suggesting that high-quality evidence can significantly improve biomedical question answering.
 
 BM25-based retrieval performs substantially worse than the baseline, indicating that lexical matching alone may retrieve noisy or insufficient evidence for biomedical questions.
 
-Dense retrieval performs much better than BM25 retrieval. Using `all-MiniLM-L6-v2`, Dense RAG achieves an accuracy close to the baseline and substantially improves over BM25-based retrieval.
+Dense retrieval performs much better than BM25 retrieval. Using all-MiniLM-L6-v2, Dense RAG achieves an accuracy close to the baseline and substantially improves over BM25-based retrieval.
 
 Increasing the number of retrieved evidence passages from three to five provides a small improvement:
 
-* Accuracy: 0.740 → 0.750
-* Macro-F1: 0.660 → 0.680
+Accuracy: 0.740 → 0.750
+Macro-F1: 0.660 → 0.680
 
-Overall, the experiments suggest that **retrieval quality is critical for RAG-based biomedical QA**. Providing more evidence is not necessarily sufficient; the relevance of the retrieved evidence strongly affects downstream answer generation.
+Overall, the experiments suggest that retrieval quality is critical for RAG-based biomedical QA. Providing more evidence is not necessarily sufficient; the relevance of the retrieved evidence strongly affects downstream answer generation.
 
-## Technologies
-
-* Python
-* PyTorch
-* Hugging Face Transformers
-* Qwen2.5-1.5B-Instruct
-* Sentence Transformers
-* all-MiniLM-L6-v2
-* BM25
-* scikit-learn
-* SLURM / UPPMAX
-
-## Dataset
+Technologies
+Python
+PyTorch
+Hugging Face Transformers
+Qwen2.5-1.5B-Instruct
+Sentence Transformers
+all-MiniLM-L6-v2
+BM25
+scikit-learn
+SLURM / UPPMAX
+Dataset
 
 The experiments use a BioASQ-derived biomedical question answering dataset.
 
 The dataset is not included in this repository. Please obtain the dataset from its original source and place the required files under:
 
-```text
 data/
 ├── train.json
 └── test.json
-```
-
-## Running the experiments
+Running the experiments
 
 Create the environment and install the dependencies:
 
-```bash
 pip install -r requirements.txt
-```
 
 Run the baseline:
 
-```bash
 python src/baseline.py
-```
 
 Run Oracle Context RAG:
 
-```bash
 python src/oracle_rag.py
-```
 
 Run BM25 RAG:
 
-```bash
 python src/bm25_rag.py
-```
 
 Run Dense RAG:
 
-```bash
 python src/dense_rag.py
-```
 
 Evaluate predictions:
 
-```bash
 python src/evalate.py
-```
 
 For experiments on UPPMAX, the provided SLURM scripts can be used.
 
-## Project Structure
-
-```text
+Project Structure
 ├── data/          # Dataset files (not included)
 ├── src/           # Experiment and evaluation scripts
 ├── scripts/       # SLURM job scripts
 ├── results/       # Experiment results
 ├── requirements.txt
 └── README.md
-```
-
-## Future Work
+Future Work
 
 Potential extensions include:
 
-* Hybrid BM25 + dense retrieval
-* Neural reranking
-* Alternative embedding models
-* Larger language models
-* Retrieval quality evaluation
-* Evidence-grounded answer evaluation
-* Analysis of retrieval errors and hallucinations
+Hybrid BM25 + dense retrieval
+Neural reranking
+Alternative embedding models
+Larger language models
+Retrieval quality evaluation
+Evidence-grounded answer evaluation
+Analysis of retrieval errors and hallucinations
