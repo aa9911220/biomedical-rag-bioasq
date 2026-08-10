@@ -1,0 +1,6 @@
+torch==2.5.1
+transformers
+sentence-transformers
+rank-bm25
+scikit-learn
+tqdm
